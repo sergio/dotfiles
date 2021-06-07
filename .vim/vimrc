@@ -1,0 +1,242 @@
+set nocompatible
+
+nnoremap <cr> :
+
+let mapleader="," " leader is comma
+
+" Reset and enable filetype detection
+filetype off
+filetype plugin indent on
+
+" Indent settings
+set autoindent " Enable autoindent
+set nowrap " Do not wrap lines by default
+
+" Improve terminal response
+set ttyfast " Indicate fast terminal conn for faster redraw
+set ttymouse=xterm2 " Indicate terminal type for mouse codes
+set ttyscroll=3 " Speedup scrolling
+
+" File content defaults
+set encoding=utf-8
+set fileformats=unix,dos,mac
+
+" Show (incomplete) command in bottom bar
+set showcmd 
+set noshowmode " Don't show mode as it is shown by lightline
+
+" Display configuration
+set number " Show line numbers
+set laststatus=2 " Show statusline always
+
+" Auto read and write
+set autoread " Automatically read changed files
+set autowrite " Automatically save before :next, :make etc.
+
+" Allows backspacing like in most other programs
+set backspace=indent,eol,start
+
+"------------------------------------
+
+call plug#begin('~/.vim/plugged')
+
+" Essential plugins
+"
+Plug 'itchyny/lightline.vim'
+Plug 'pbrisbin/vim-colors-off'
+
+Plug '/usr/local/bin/fzf'
+Plug 'junegunn/fzf.vim'
+
+" Languages
+Plug 'fatih/vim-go', { 'do': ':GoUpdateBinaries' }
+Plug 'stephpy/vim-yaml'
+
+" Development
+
+Plug 'mattn/emmet-vim'
+
+" Side bar with code outline
+Plug 'majutsushi/tagbar'
+
+" Focused writing
+Plug 'junegunn/limelight.vim'
+
+call plug#end()
+
+"------------------------------------
+" Syntax highlighting
+
+set background=dark
+colorscheme off " the color scheme is called 'off' (pbrisbin/vim-colors-off)
+
+" Use syntax highlighting
+syntax enable
+
+" Disable syntax highlightning when opening large files
+autocmd BufWinEnter * if line2byte(line("$") + 1) > 1000000 | syntax clear | endif
+
+"------------------------------------
+" Current position highlight
+
+" Setting all these to NONE only highlights current line number.
+highlight CursorLine cterm=NONE ctermbg=NONE ctermfg=NONE guibg=NONE guifg=NONE
+" Clearing CursorLineNR removes foreground and background color changes
+" to the line number, making it only bold and white.
+highlight clear CursorLineNR
+set cursorline
+
+"------------------------------------
+" Buffers
+
+" Allow switching buffers when there are pending changes in the current buffer
+set hidden
+
+"------------------------------------
+" Statusline
+
+set laststatus=2
+
+"------------------------------------
+" Search
+
+set incsearch " search as characters are entered
+set hlsearch " highlight search matches
+set ignorecase " search case insensitive ...
+set smartcase " ... but not if search  begins upper case.
+
+" Search mappings
+" search will center line on screen
+nnoremap n nzzzv
+nnoremap N Nzzzv
+"
+"------------------------------------
+" Spaces & Tabs
+
+set expandtab " tabs are spaces
+" set tabstop=4 " number of visual spaces per TAB (tab width), (not needed when expandtab is set)
+" softtabstop: number of spaces inserted by TAB when editing and also number 
+" of spaces deleted by backspace
+set tabstop=4
+set shiftwidth=4
+set softtabstop=4
+"-------------------------------------
+
+" Command line popup completion
+" * Use Ctrl+d to show options matching current pattern
+" * Use Tab to auto-complete
+set wildmenu
+
+" File completion in command line
+set path+=**
+set wildignore+=**/node_modules/**
+
+"---------------------------------------------
+" Optimizations
+
+" Vim loves to redraw the screen during things it probably doesn't
+" need to, like in the middle of macros. This tells Vim not to bother
+" redrawing during these scenarios, leading to faster macros.
+set lazyredraw 
+
+" Hide swap files
+set directory^=$HOME/.vim/tmp//
+"---------------------------------------------
+" Thanks
+
+" https://dougblack.io/words/a-good-vimrc.html
+
+"---------------------------------------------
+" Golang
+
+" vim-go
+let g:go_fmt_command = "goimports"
+let g:go_autodetect_gopath = 1
+let g:go_list_type = "quickfix"
+
+"let g:go_highlight_types = 1
+"let g:go_highlight_fields = 1
+"let g:go_highlight_functions = 1
+"let g:go_highlight_function_calls = 1
+"let g:go_highlight_extra_types = 1
+"let g:go_highlight_generate_tags = 1
+
+" Open :GoDeclsDir with ctrl-g
+nmap <C-g> :GoDeclsDir<cr>
+imap <C-g> <esc>:<C-u>GoDeclsDir<cr>
+
+augroup go
+    autocmd!
+
+    " Show by default 4 spaces for a tab
+    autocmd BufNewFile,BufRead *.go setlocal noexpandtab tabstop=4 shiftwidth=4
+
+    " :GoBuild and :GoTestCompile
+    autocmd FileType go nmap <leader>b :<C-u>call <SID>build_go_files()<CR>
+
+    " :GoTest
+    autocmd FileType go nmap <leader>t <Plug>(go-test)
+
+    " :GoRun
+    autocmd FileType go nmap <leader>r <Plug>(go-run)
+
+    " :GoDoc
+    autocmd FileType go nmap <leader>d <Plug>(go-doc)
+
+    " :GoCoverageToggle
+    autocmd FileType go nmap <leader>c <Plug>(go-coverage-toggle)
+
+    " :GoInfo
+    autocmd FileType go nmap <leader>i <Plug>(go-info)
+
+    " :GoMetaLinter
+    autocmd FileType go nmap <leader>l <Plug>(go-metalinter)
+
+    " :GoDef but opens in a vertical split
+    autocmd FileType go nmap <leader>v <Plug>(go-def-vertical)
+
+    " :GoDef but opens in a horizontal split
+    autocmd FileType go nmap <leader>s <Plug>(go-def-split)
+
+    " :GoAlternate commands :A :AV :AS and :AT
+    autocmd FileType go command! -bang A call go#alternate#Switch(<bang>0, 'edit')
+    autocmd FileType go command! -bang AV call go#alternate#Switch(<bang>0, 'vsplit')
+    autocmd FileType go command! -bang AS call go#alternate#Switch(<bang>0, 'split')
+    autocmd FileType go command! -bang AT call go#alternate#Switch(<bang>0, 'tabe')
+augroup END
+
+" build_go_files is a custom function that builds or compiles the test file.
+" It calls :GoBuild if it is a Go file, or :GoTestCompile if it is a test file.
+function! s:build_go_files()
+    let l:file = expand('%')
+    if l:file =~# '^\f\+_test\.go$'
+        call go#test#Test(0, 1)
+    elseif l:file =~# '^\f\+\.go$'
+        call go#cmd#Build(0)
+    endif
+endfunction
+
+" Fix Golang Tagbar horrible colors (See |:highlight|)
+highlight TagbarScope guifg=White ctermfg=White
+highlight TagbarComment guifg=White ctermfg=White
+highlight TagbarKind guifg=White ctermfg=White
+highlight TagbarNestedKind guifg=White ctermfg=White
+highlight TagbarScope guifg=White ctermfg=White
+highlight TagbarType guifg=White ctermfg=White
+highlight TagbarSignature guifg=White ctermfg=White
+highlight TagbarPseudoID guifg=White ctermfg=White
+highlight TagbarFoldIcon guifg=White ctermfg=White
+highlight TagbarHighlight guifg=White ctermfg=White
+highlight TagbarVisibilityPublic guifg=White ctermfg=White
+highlight TagbarVisibilityProtected guifg=White ctermfg=White
+highlight TagbarVisibilityPrivate guifg=White ctermfg=White
+
+"---------------------------------------------
+" Mappings
+"
+" Open tagbar
+nmap <F8> :TagbarToggle<CR>
+
+" Act like D and C
+nnoremap Y y$
+
